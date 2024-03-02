@@ -1,0 +1,5 @@
+*.json
+*.pth
+lightning_logs/*
+SKU110K_fixed/*
+checkpoints/*
