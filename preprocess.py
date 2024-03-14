@@ -1,21 +1,34 @@
+import pandas as pd
+from pathlib import Path
+from typing import Dict, List
 import json
 import os
 from PIL import Image
 
-# Define the paths to your datasets
-train_annotations_path = 'annotations_train.json'
-val_annotations_path = 'annotations_val.json'
+def read_anns(annotation_path: Path, split: str) -> pd.DataFrame:
+    df = pd.read_csv(annotation_path / f"annotations_{split}.csv")
+    return df
 
-# Load your datasets
-with open(train_annotations_path) as f:
-    train_annotations = json.load(f)
-with open(val_annotations_path) as f:
-    val_annotations = json.load(f)
+def anns_to_dict(df: pd.DataFrame):
+    annotations = {}
 
-# Define the path to the image folder
-image_folder_path = 'SKU110K_fixed/images'
+    for i in df.itertuples():
+        x_left = i.x_left
+        y_top = i.y_top
+        x_right = i.x_right
+        y_bot = i.y_bot
+        anns = [x_left, y_top, x_right, y_bot]
+        img_name = i.image_name
+        if img_name in annotations:
+            annotations[img_name].append(anns)
+        else:
+            annotations[img_name] = [anns]
+    return annotations
 
-# This function will convert your dataset into COCO format
+def save_dict(annotations: Dict[str, List[int]], json_name: str):
+    with open(json_name, "w") as outfile:
+        json.dump(annotations,outfile)
+
 def convert_to_coco(annotations, image_folder_path):
     images = []
     coco_annotations = []
@@ -46,7 +59,7 @@ def convert_to_coco(annotations, image_folder_path):
             coco_annotations.append({
                 "id": annotation_id,
                 "image_id": image_id,
-                "category_id": 1,  # Assuming a single category with ID 1
+                "category_id": 1,
                 "bbox": [x, y, width, height],
                 "area": area,
                 "iscrowd": 0
@@ -59,15 +72,24 @@ def convert_to_coco(annotations, image_folder_path):
         "categories": categories
     }
 
-# Convert datasets
-coco_train = convert_to_coco(train_annotations, image_folder_path)
-coco_val = convert_to_coco(val_annotations, image_folder_path)
+def convert_pipeline(image_folder_path: str, split: str):
+    annotations_path = f'annotations_{split}.json'
+    with open(annotations_path) as f:
+        annotations = json.load(f)
+    coco_dataset = convert_to_coco(annotations, image_folder_path)
+    with open(f'coco_annotations_{split}.json', 'w') as f:
+        json.dump(coco_dataset, f)
 
-# Save the COCO formatted datasets
-with open('coco_annotations_train.json', 'w') as f:
-    json.dump(coco_train, f)
+def main(split: str):
+    image_folder_path = 'SKU110K_fixed/images'
+    df = read_anns(Path("SKU110K_fixed/annotations"), split)
+    df.columns = ["image_name", "x_left", "y_top", "x_right", "y_bot", "class", "img_height", "img_width"]
+    annotations = anns_to_dict(df)
+    save_dict(annotations, f"annotations_{split}.json")
+    convert_pipeline(image_folder_path, split)
 
-with open('coco_annotations_val.json', 'w') as f:
-    json.dump(coco_val, f)
-
-print("Conversion to COCO format completed!")
+if __name__ == "__main__":
+    main("train")
+    main("val")
+    main("test")
+    print("Conversion to COCO format completed!")
