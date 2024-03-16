@@ -13,7 +13,7 @@ class Detr(pl.LightningModule):
         self.lr_decay_steps = lr_decay_steps
         hf_model_id = MODEL_TYPE_MAP[kwargs["model_type"]]
         self.model = DetrForObjectDetection.from_pretrained(hf_model_id,
-                                                            # revision="no_timm",
+                                                            revision="no_timm" if kwargs["model_type"] == "resnet-50" else None,
                                                             num_labels=2,
                                                             num_queries=num_queries,
                                                             ignore_mismatched_sizes=True,
@@ -26,10 +26,11 @@ class Detr(pl.LightningModule):
         if kwargs["train_backbone"]:
             for param in self.parameters():
                 param.requires_grad = True
+        self.load_state_dict(torch.load("../checkpoints/detr_train_v4/last.ckpt")["state_dict"])
         self.map_metric = MeanAveragePrecision(box_format="cxcywh", iou_type="bbox", class_metrics=False).to(torch.device("cuda"))
 
     def load_pretrained_num_queries(self, model_type):
-        if model_type == "resnet50":
+        if model_type == "resnet-50":
             weight_dict = torch.load("../detr-r50-e632da11.pth")
         elif model_type == "resnet101-dc5":
             weight_dict = torch.load("../detr-r101-dc5-a2e86def.pth")
@@ -43,7 +44,7 @@ class Detr(pl.LightningModule):
         self.model.model.query_position_embeddings.weight.data[300:] = new_weights
         self.model.model.query_position_embeddings.weight.data += noise
 
-    def common_step(self, batch, batch_idx):
+    def common_step(self, batch):
         pixel_values = batch["pixel_values"]
         pixel_mask = batch["pixel_mask"]
         labels = [{k: v.to(self.device) for k, v in t.items()} for t in batch["labels"]]
@@ -53,7 +54,7 @@ class Detr(pl.LightningModule):
         return loss, loss_dict
 
     def training_step(self, batch, batch_idx):
-        loss, loss_dict = self.common_step(batch, batch_idx)
+        loss, loss_dict = self.common_step(batch)
         # logs metrics for each training_step,
         # and the average across the epoch
         self.log("training_loss", loss, on_epoch=True, on_step=False)

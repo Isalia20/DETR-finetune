@@ -4,6 +4,7 @@ from detr_model import Detr
 from dataset import DataModule
 from pytorch_lightning.callbacks import ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
+from model_type_map import MODEL_TYPE_MAP
 import wandb
 
 PARAMS = {
@@ -14,7 +15,7 @@ PARAMS = {
         "lr_decay_steps": 70,
         "batch_size": 1,
         "train_backbone": True,
-        "experiment_name": "detr_train_v4",
+        "experiment_name": "detr_train_v4_cont_backbone",
         "model_type": "resnet101-dc5",
         "augmentations": ["hflip", "blur"],
         "accumulate_grad_batches": 8,
@@ -22,7 +23,7 @@ PARAMS = {
 
 
 def main(wandb_logger, batch_size, experiment_name, lr, lr_backbone, weight_decay, num_queries, lr_decay_steps, **kwargs):
-    sku_data_module = DataModule(batch_size=batch_size, dataset_name="SKU110K", model_type=kwargs["model_type"])
+    sku_data_module = DataModule(batch_size=batch_size, dataset_name="SKU110K", model_type=MODEL_TYPE_MAP[kwargs["model_type"]])
     output_folder = f"../checkpoints/{experiment_name}"
     callbacks = [
             ModelCheckpoint(monitor='map',
