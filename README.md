@@ -1,11 +1,6 @@
 # DETR-finetune
-Repository for finetuning DETR on SKU110K dataset. Checkpoints will be released once training is done. 
+Repository for finetuning DETR on SKU110K dataset. Checkpoint is now released on HuggingFace. [DETR-Resnet-50-SKU110K-400-num-queries](https://huggingface.co/isalia99/detr-resnet-50-sku110k)
 
-Finetuning model with num_queries!=100 is quite hard since it requires retraining on the whole COCO dataset from scratch. I have tried finetuning with num_queries=400 but the results achieved were abysmal. Plus even training on just a single image with num_queries=400 seemed to be impossible for some odd reason. Therefore this repository takes following 
-strategy for finetuning and then for inference:
-1. Take an image and divide it into 4 parts(4 equal crops)
-2. Train this way
-3. During inference crop image into 4 equal parts do inference with num_queries=100 for each part separately
-4. Stitch the predictions together
+Finetuning DETR model with num_queries!=100 is unusual and from my experiments it usually fails unless you equip some form of a strategy for initializing the num_queries nn.Embedding module. From what I have tried initializing it with either Xavier or just Normal with small std, doesn't work as training usually doesn't converge and the mAP achieved on those training runs are painfully low even after training it for 24+ hours. To counteract this, what I have found from my experiments is that initializing num_queries with pretrained weights is much better. In `detr_model.py` function `load_pretrained_num_queries` does this. Intuition behind it being simple. Pretrained num_queries parameter is specialized to detect objects in different area of images, therefore if you initialize them with pretrained weights it's easy for model to slightly nudge these queries to specialize them to detect objects in different areas of the image, however starting training them from scratch is impractical(unless you are training on a very large dataset but even then not using pretrained num_queries will lead to muuuuch longer training time). 
 
-While this kind of setup is suboptimal, I'm still researching why training with num_queries=400 doesn't work.
+Since we are training the model with different num_queries than the pretrained one, question stands, how do we initialize the num_queries? If num_queries > 400 we can simply take the num_queries=100 pretrained weights and **copy them 4 times while adding a small noise to them**. And that does the trick, after trying to train the model for many many hours with different setups, this setup worked the best and achieved **59.0 mAP** on validation set of SKU110K dataset.

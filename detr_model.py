@@ -26,7 +26,6 @@ class Detr(pl.LightningModule):
         if kwargs["train_backbone"]:
             for param in self.parameters():
                 param.requires_grad = True
-        self.load_state_dict(torch.load("../checkpoints/detr_train_v4/last.ckpt")["state_dict"])
         self.map_metric = MeanAveragePrecision(box_format="cxcywh", iou_type="bbox", class_metrics=False).to(torch.device("cuda"))
 
     def load_pretrained_num_queries(self, model_type):
