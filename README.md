@@ -1,6 +1,19 @@
 # DETR-finetune
-Repository for finetuning DETR on SKU110K dataset. Checkpoint is now released on HuggingFace. [DETR-Resnet-50-SKU110K-400-num-queries](https://huggingface.co/isalia99/detr-resnet-50-sku110k)
 
-Finetuning DETR model with num_queries!=100 is unusual and from my experiments it usually fails unless you equip some form of a strategy for initializing the num_queries nn.Embedding module. From what I have tried initializing it with either Xavier or just Normal with small std, doesn't work as training usually doesn't converge and the mAP achieved on those training runs are painfully low even after training it for 24+ hours. To counteract this, what I have found from my experiments is that initializing num_queries with pretrained weights is much better. In `detr_model.py` function `load_pretrained_num_queries` does this. Intuition behind it being simple. Pretrained num_queries parameter is specialized to detect objects in different area of images, therefore if you initialize them with pretrained weights it's easy for model to slightly nudge these queries to specialize them to detect objects in different areas of the image, however starting training them from scratch is impractical(unless you are training on a very large dataset but even then not using pretrained num_queries will lead to muuuuch longer training time). 
+Welcome to the repository dedicated to finetuning DETR on the SKU110K dataset! 🚀
 
-Since we are training the model with different num_queries than the pretrained one, question stands, how do we initialize the num_queries? If num_queries > 400 we can simply take the num_queries=100 pretrained weights and **copy them 4 times while adding a small noise to them**. And that does the trick, after trying to train the model for many many hours with different setups, this setup worked the best and achieved **59.0 mAP** on validation set of SKU110K dataset.
+We are excited to share that our trained checkpoint, DETR-Resnet-50 configured for SKU110K with 400 queries, is now available on HuggingFace. 🎉
+
+## Why is this important?
+Finetuning DETR with a `num_queries` parameter different from the default (100) is challenging. Our experiments show that without a proper initialization strategy, training tends to fail — resulting in low mean Average Precision (mAP) even after extensive training.
+
+## Our Solution ✨
+We discovered that using pretrained weights to initialize `num_queries` significantly improves performance. It leverages the pretrained model's ability to detect objects across various image areas, making a small adjustment to specialize in the new dataset much easier than starting from scratch.
+
+🔍 Explore the `load_pretrained_num_queries` function in `detr_model.py` to see how we implement this strategy.
+
+## Overcoming Initialization Challenges
+When `num_queries` exceeds 400, we've found that duplicating the pretrained `num_queries=100` weights four times and introducing minor noise sets the stage for success.
+
+## Results 📈
+After extensive experimentation with various configurations, this approach stood out, achieving a 59.0 mAP on the SKU110K validation set.
