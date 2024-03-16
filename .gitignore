@@ -1,0 +1,8 @@
+*.json
+*.pth
+lightning_logs/*
+SKU110K_fixed/*
+checkpoints/*
+img_folder/*
+wandb/*
+__pycache__/
