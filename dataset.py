@@ -22,8 +22,8 @@ class SKUDetection(torchvision.datasets.CocoDetection):
         return image
     
     def __getitem__(self, idx):
-        while idx in [3575, 5347, 8084, 8131]:
-            idx = random.randint(0, self.__len__())
+        while idx in [3577, 5350, 8089, 8136]:
+            idx = random.randint(0, self.__len__() - 1)
         img, target = super().__getitem__(idx)
         # Prune bounding boxes
         image_id = self.ids[idx]
