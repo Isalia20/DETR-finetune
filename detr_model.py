@@ -27,20 +27,22 @@ class Detr(pl.LightningModule):
             for param in self.parameters():
                 param.requires_grad = True
         self.map_metric = MeanAveragePrecision(box_format="cxcywh", iou_type="bbox", class_metrics=False).to(torch.device("cuda"))
-
+    
     def load_pretrained_num_queries(self, model_type):
-        if model_type == "resnet-50":
-            weight_dict = torch.load("../detr-r50-e632da11.pth")
-        elif model_type == "resnet101-dc5":
-            weight_dict = torch.load("../detr-r101-dc5-a2e86def.pth")
-        self.query_weights = weight_dict["model"]["query_embed.weight"]
+        model_weights = {
+            "resnet-50": "../detr-r50-e632da11.pth",
+            "resnet101-dc5": "../detr-r101-dc5-a2e86def.pth"
+        }
+        if model_type in model_weights:
+            weight_dict = torch.load(model_weights[model_type])
+            self.query_weights = weight_dict["model"]["query_embed.weight"]
+        else:
+            raise ValueError(f"Unsupported model type: {model_type}")
         new_weights = torch.nn.Parameter(self.query_weights.clone())
         self.model.model.query_position_embeddings = nn.Embedding(num_embeddings=400, embedding_dim=256)
         noise = torch.randn_like(self.model.model.query_position_embeddings.weight) * 0.01
-        self.model.model.query_position_embeddings.weight.data[:100] = new_weights
-        self.model.model.query_position_embeddings.weight.data[100:200] = new_weights
-        self.model.model.query_position_embeddings.weight.data[200:300] = new_weights
-        self.model.model.query_position_embeddings.weight.data[300:] = new_weights
+        for i in range(0, 400, 100):
+            self.model.model.query_position_embeddings.weight.data[i:i+100] = new_weights
         self.model.model.query_position_embeddings.weight.data += noise
 
     def common_step(self, batch):
