@@ -7,13 +7,6 @@ from torchmetrics.detection.mean_ap import MeanAveragePrecision
 from model_type_map import MODEL_TYPE_MAP
 
 
-def replace_relu_with_silu(model):
-    for child_name, child in model.named_children():
-        if isinstance(child, nn.ReLU):
-            setattr(model, child_name, nn.SiLU())
-        else:
-            replace_relu_with_silu(child)
-
 class Detr(pl.LightningModule):
     def __init__(self, lr, lr_backbone, weight_decay, num_queries: int, lr_decay_steps: int, **kwargs):
         super().__init__()
@@ -33,8 +26,6 @@ class Detr(pl.LightningModule):
         if kwargs["train_backbone"]:
             for param in self.parameters():
                 param.requires_grad = True
-        if kwargs["replace_relu"]:
-            replace_relu_with_silu(self.model)
         print(self.model)
         self.map_metric = MeanAveragePrecision(box_format="cxcywh", iou_type="bbox", class_metrics=False).to(torch.device("cuda"))
     

@@ -19,7 +19,6 @@ PARAMS = {
         "model_type": "resnet-50",
         "augmentations": ["hflip", "blur"],
         "accumulate_grad_batches": None,
-        "replace_relu": True,
     }
 
 
