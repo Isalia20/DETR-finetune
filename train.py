@@ -13,12 +13,13 @@ PARAMS = {
         "weight_decay": 1e-4,
         "num_queries": 400,
         "lr_decay_steps": 70,
-        "batch_size": 1,
-        "train_backbone": True,
+        "batch_size": 8,
+        "train_backbone": False,
         "experiment_name": "detr_train_v4_cont_backbone",
-        "model_type": "resnet101-dc5",
+        "model_type": "resnet-50",
         "augmentations": ["hflip", "blur"],
-        "accumulate_grad_batches": 8,
+        "accumulate_grad_batches": None,
+        "replace_relu": True,
     }
 
 
@@ -36,15 +37,26 @@ def main(wandb_logger, batch_size, experiment_name, lr, lr_backbone, weight_deca
                             ),
         ]
     model = Detr(lr=lr, lr_backbone=lr_backbone, weight_decay=weight_decay, num_queries=num_queries, lr_decay_steps=lr_decay_steps, **kwargs)
-    trainer = pl.Trainer(
-        accelerator="gpu",
-        max_epochs=300,
-        precision='16-mixed',
-        benchmark=True,
-        callbacks=callbacks,
-        logger=wandb_logger,
-        accumulate_grad_batches=8,
-    )
+    #TODO there should be a better way to do this
+    if PARAMS["accumulate_grad_batches"]:
+        trainer = pl.Trainer(
+            accelerator="gpu",
+            max_epochs=300,
+            precision='16-mixed',
+            benchmark=True,
+            callbacks=callbacks,
+            logger=wandb_logger,
+            accumulate_grad_batches=PARAMS["accumulate_grad_batches"],
+        )
+    else:
+        trainer = pl.Trainer(
+            accelerator="gpu",
+            max_epochs=300,
+            precision='16-mixed',
+            benchmark=True,
+            callbacks=callbacks,
+            logger=wandb_logger,
+        )
     trainer.fit(model,
                 sku_data_module,
                 ) 
